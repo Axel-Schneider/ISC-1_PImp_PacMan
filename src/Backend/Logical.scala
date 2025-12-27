@@ -110,6 +110,7 @@ class Logical {
   private def calculateFrame(logical: Logical): Unit = {
     moveEntity(Player)
     ghosts.foreach(g => moveEntity(g, true))
+    eatCaseByPlayer()
   }
 
   private def moveEntity(entity: Entity, isGhosts: Boolean = false): Unit = {
@@ -136,5 +137,18 @@ class Logical {
     } else {
       println(s"$entity can't go forward, next case not a road")
     }
+  }
+
+  private def eatCaseByPlayer() {
+    val currentCase = map(player.Y)(player.X);
+    if(!currentCase.isInstanceOf[RoadCase]) return;
+    val currentRoad = currentCase.asInstanceOf[RoadCase]
+    player.addScore(Items.GetValue(currentRoad.Item));
+    if(currentRoad.Item == Items.PowerPellet) makeGhostsVulnarable()
+    currentRoad.Item = Items.None;
+  }
+
+  private def makeGhostsVulnarable(): Unit = {
+    // TO DO
   }
 }
