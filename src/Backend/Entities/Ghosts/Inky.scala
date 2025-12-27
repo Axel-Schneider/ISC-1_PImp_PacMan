@@ -8,6 +8,7 @@ class Inky extends Ghosts(Color.BLUE) {
   override def takeDecision(map: Array[Array[Case]]): Unit = {
     // To implement AI motion
   }
+  override def toString: String = "Inky"
 }
 
 object Inky {

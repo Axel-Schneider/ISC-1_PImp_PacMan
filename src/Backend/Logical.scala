@@ -1,8 +1,9 @@
 package Backend
 
-import Backend.Cases.{Case, DoorCase, EmptyCase, Items, RoadCase, WallCase}
+import Backend.Cases.{Case, CaseType, DoorCase, EmptyCase, Items, RoadCase, WallCase}
 import Backend.Entities.Ghosts.{Blinky, Clyde, Ghosts, Inky, Pinky}
-import Backend.Entities.Player
+import Backend.Entities.{Directions, Entity, Player}
+
 import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
@@ -16,6 +17,8 @@ class Logical {
     Inky.INSTANCE,
     Pinky.INSTANCE
   );
+
+  private var isGamePlaying = false;
 
   private var playerSpawn: RoadCase = null;
   private var ghostsSpawn: Array[RoadCase] = Array.empty;
@@ -34,6 +37,8 @@ class Logical {
   def Player = player;
   def Ghosts: Array[Ghosts] = ghosts;
 
+  def IsGamePlaying = isGamePlaying;
+
   def subscribeCycle(callback: Logical => Unit): Unit = {
     subscriptions += callback;
   }
@@ -42,38 +47,46 @@ class Logical {
     for(s <- subscriptions) s(this)
   }
 
+  def startGame() = {
+    isGamePlaying = true;
+  }
+
+  def pauseGame() = {
+    isGamePlaying = false;
+  }
+
   def LoadLevel(map: Array[String]): Unit = {
     this.map = Array.ofDim(map.length, map(0).length);
 
     for((l, y) <- map.zipWithIndex) {
       for((c, x) <- l.zipWithIndex) {
         this.map(y)(x) = c match {
-          case ' ' => new EmptyCase();
-          case 'w' => new WallCase();
-          case 'r' => new RoadCase();
+          case ' ' => new EmptyCase(x, y);
+          case 'w' => new WallCase(x, y);
+          case 'r' => new RoadCase(x, y);
           case 'd' => {
-            val d = new RoadCase();
+            val d = new RoadCase(x, y);
             d.Item = Items.PacDot;
             d
           };
           case 'D' => {
-            val D = new RoadCase();
+            val D = new RoadCase(x, y);
             D.Item = Items.PowerPellet;
             D
           };
           case 'i' => {
-            val i = new RoadCase()
+            val i = new RoadCase(x, y)
             itemsSpawn = i;
             i
           };
-          case 'v' => new DoorCase();
+          case 'v' => new DoorCase(x, y);
           case 'P' => {
-            val P = new RoadCase();
+            val P = new RoadCase(x, y);
             playerSpawn = P;
             P
           };
           case 'G' => {
-            val G = new RoadCase()
+            val G = new RoadCase(x, y)
             ghostsSpawn :+= G;
             G
           };
@@ -83,10 +96,45 @@ class Logical {
 
     if(player == null) throw new Exception("No spawn for the player in the level!")
     playerSpawn.Entities += player;
+    player.definePosition(playerSpawn.X, playerSpawn.Y)
 
     if(ghostsSpawn.length <= 0) throw new Exception("No spawn for the ghosts in the level !")
     for(g <- ghosts) {
-      ghostsSpawn(Random.nextInt(ghostsSpawn.length)).Entities += g;
+      val spw = ghostsSpawn(Random.nextInt(ghostsSpawn.length));
+      spw.Entities += g;
+      g.definePosition(spw.X, spw.Y)
+    }
+  }
+
+  subscriptions += calculateFrame;
+  private def calculateFrame(logical: Logical): Unit = {
+    moveEntity(Player)
+    ghosts.foreach(g => moveEntity(g, true))
+  }
+
+  private def moveEntity(entity: Entity, isGhosts: Boolean = false): Unit = {
+    if(!isGamePlaying) return;
+    val deltaX = entity.Direction match {
+      case Directions.Left => -1
+      case Directions.Right => 1
+      case _ => 0
+    }
+    val deltaY = entity.Direction match {
+      case Directions.Up => -1
+      case Directions.Down => 1
+      case _ => 0
+    }
+
+    val nextCase = map(entity.Y + deltaY)(entity.X + deltaX)
+    val currentCase = map(entity.Y)(entity.X);
+
+    if(nextCase.CaseType == CaseType.Road || (isGhosts && nextCase.CaseType == CaseType.Door)) {
+      val nextRoad = nextCase;
+      currentCase.Entities.remove(currentCase.Entities.indexOf(entity));
+      nextRoad.Entities += entity;
+      nextRoad.definePositionOf(entity)
+    } else {
+      println(s"$entity can't go forward, next case not a road")
     }
   }
 }

@@ -6,9 +6,8 @@ import Backend.Entities.{Entity, Player}
 
 import scala.collection.mutable.ArrayBuffer
 
-class RoadCase extends Case(CaseType.Road) {
+class RoadCase(posX: Int, posY: Int) extends Case(CaseType.Road, posX, posY) {
   var Item: Items = Items.None;
-  var Entities: ArrayBuffer[Entity] = ArrayBuffer.empty;
 
   override def toString: String = {
     if(!Entities.isEmpty)

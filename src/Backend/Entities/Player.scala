@@ -16,4 +16,5 @@ class Player extends Entity {
   def resetScore(): Unit = {
     score = 0;
   }
+  override def toString: String = "Player"
 }

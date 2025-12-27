@@ -1,5 +1,5 @@
 package Backend.Cases
 
-class EmptyCase extends Case(CaseType.Empty) {
+class EmptyCase(posX: Int, posY: Int) extends Case(CaseType.Empty, posX, posY) {
   override def toString: String = " ";
 }

@@ -2,7 +2,7 @@ package Backend.Cases
 
 import java.awt.Color
 
-class DoorCase extends Case(CaseType.Door) {
+class DoorCase(posX: Int, posY: Int) extends Case(CaseType.Door, posX, posY) {
   val WallColor: Color = Color.PINK;
 
   override def toString: String = "#";

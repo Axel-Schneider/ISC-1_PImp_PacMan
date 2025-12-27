@@ -9,6 +9,10 @@ class Position {
     this.y = y;
   }
 
+  def definePositionOf(pos: Position) = {
+    pos.definePosition(x, y);
+  }
+
   def X: Int = x
   def Y: Int = y;
 }
