@@ -4,9 +4,11 @@ import Backend.Cases.Items.Items
 import Backend.Entities.Ghosts.Ghosts
 import Backend.Entities.{Entity, Player}
 
+import scala.collection.mutable.ArrayBuffer
+
 class RoadCase extends Case(CaseType.Road) {
   var Item: Items = Items.None;
-  var Entities: Array[Entity] = Array.empty;
+  var Entities: ArrayBuffer[Entity] = ArrayBuffer.empty;
 
   override def toString: String = {
     if(!Entities.isEmpty)
