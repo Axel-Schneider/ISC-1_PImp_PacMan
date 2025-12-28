@@ -1,6 +1,7 @@
 package Backend
 
 import Backend.Cases.{Case, CaseType, DoorCase, EmptyCase, Items, RoadCase, WallCase}
+import Backend.Entities.Directions.Directions
 import Backend.Entities.Ghosts.{Blinky, Clyde, Ghosts, Inky, Pinky}
 import Backend.Entities.{Directions, Entity, Player}
 
@@ -106,25 +107,26 @@ class Logical {
     }
   }
 
+  def ChangePlayerDirection(direction: Directions): Unit = {
+    val (deltaX, deltaY) = Directions.getDeltaByDirection(direction);
+    val nextCase = map(player.Y + deltaY)(player.X + deltaX)
+    if(nextCase.CaseType == CaseType.Road) player.ChangeDirection(direction)
+    else println("Cannot change direction for a wall")
+  }
+
   subscriptions += calculateFrame;
   private def calculateFrame(logical: Logical): Unit = {
     moveEntity(Player)
     ghosts.foreach(g => moveEntity(g, true))
     eatCaseByPlayer()
+
+    // LAB
+    ChangePlayerDirection(Directions(Random.nextInt(Directions.maxId)));
   }
 
   private def moveEntity(entity: Entity, isGhosts: Boolean = false): Unit = {
     if(!isGamePlaying) return;
-    val deltaX = entity.Direction match {
-      case Directions.Left => -1
-      case Directions.Right => 1
-      case _ => 0
-    }
-    val deltaY = entity.Direction match {
-      case Directions.Up => -1
-      case Directions.Down => 1
-      case _ => 0
-    }
+    val (deltaX, deltaY) = Directions.getDeltaByDirection(entity.Direction);
 
     val nextCase = map(entity.Y + deltaY)(entity.X + deltaX)
     val currentCase = map(entity.Y)(entity.X);
@@ -140,6 +142,7 @@ class Logical {
   }
 
   private def eatCaseByPlayer() {
+    if(!isGamePlaying) return;
     val currentCase = map(player.Y)(player.X);
     if(!currentCase.isInstanceOf[RoadCase]) return;
     val currentRoad = currentCase.asInstanceOf[RoadCase]
@@ -149,6 +152,6 @@ class Logical {
   }
 
   private def makeGhostsVulnarable(): Unit = {
-    // TO DO
+    ghosts.foreach(g => g.makeVulnerable())
   }
 }
