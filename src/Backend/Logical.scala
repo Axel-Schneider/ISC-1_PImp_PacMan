@@ -27,14 +27,20 @@ class Logical {
   private var itemsSpawn: RoadCase = null;
 
   private val subscriptions: ArrayBuffer[Logical => Unit] = ArrayBuffer.empty;
-  private val ex: ScheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+  private val mainLoopThreadExecutor: ScheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
   private val task = new Runnable {
     override def run(): Unit = {
       notifyListener()
     }
   }
-  private val infiniteNotifier = ex.scheduleAtFixedRate(task, 1, 1, TimeUnit.SECONDS)
-
+  private val resetThreadExecutor: ScheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+  private val resetPositionTask = new Runnable {
+    override def run(): Unit = {
+      ResetPosition()
+      startGame()
+    }
+  }
+  mainLoopThreadExecutor.scheduleAtFixedRate(task, 1, 1, TimeUnit.SECONDS)
 
   ghosts.foreach(g => subscribeCycle(g.takeDecision))
 
@@ -52,12 +58,24 @@ class Logical {
     for(s <- subscriptions) s(this)
   }
 
-  def startGame() = {
+  def startGame() = resumeGame()
+
+  def resumeGame(): Unit = {
     isGamePlaying = true;
   }
 
   def pauseGame() = {
     isGamePlaying = false;
+  }
+
+  def ResetPosition(): Unit = {
+    resetEntityPosition(Player, playerSpawn)
+    Player.revive
+
+    ghosts.foreach(g => {
+      resetEntityPosition(g, ghostsSpawn(Random.nextInt(ghostsSpawn.length)))
+      g.revive
+    })
   }
 
   def LoadLevel(map: Array[String]): Unit = {
@@ -114,7 +132,7 @@ class Logical {
 
   def ChangePlayerDirection(direction: Directions): Unit = {
     val (deltaX, deltaY) = Directions.getDeltaByDirection(direction);
-    val (nx, ny) = CorrectNextPoint(player.X + deltaX, player.Y + deltaY)
+    val (nx, ny) = CorrectPoint(player.X + deltaX, player.Y + deltaY)
     if(!IsPointInTheMap(nx, ny)) {
       println("Cannot change direction for nowhere")
       return;
@@ -128,7 +146,7 @@ class Logical {
     Map.length > y && y >= 0 && Map(0).length > x && x >= 0
   }
 
-  def CorrectNextPoint(x: Int, y: Int): (Int, Int) = {
+  def CorrectPoint(x: Int, y: Int): (Int, Int) = {
     (
       if(x >= map(0).length) 0 else if (x < 0) map(0).length-1 else x,
       if(y >= map.length) 0 else if (y < 0) map.length-1 else y
@@ -152,7 +170,12 @@ class Logical {
     moveEntity(Player)
     ghosts.foreach(g => moveEntity(g, true))
     eatCaseByPlayer()
+    checkColision()
 
+    if(!player.IsAlive) {
+      pauseGame();
+      mainLoopThreadExecutor.schedule(resetPositionTask, 5, TimeUnit.SECONDS)
+    }
     // LAB
     ChangePlayerDirection(Directions(Random.nextInt(Directions.maxId)));
   }
@@ -161,7 +184,7 @@ class Logical {
     if(!isGamePlaying) return;
     val (deltaX, deltaY) = Directions.getDeltaByDirection(entity.Direction);
 
-    var (nx, ny) = CorrectNextPoint(entity.X + deltaX, entity.Y + deltaY)
+    val (nx, ny) = CorrectPoint(entity.X + deltaX, entity.Y + deltaY)
 
     if(!IsPointInTheMap(nx, ny)) {
       println("Error, case doesn't exist on the map")
@@ -193,5 +216,37 @@ class Logical {
 
   private def makeGhostsVulnarable(): Unit = {
     ghosts.foreach(g => g.makeVulnerable())
+  }
+
+  private def checkColision(): Unit = {
+    val (cx, cy) = (Player.X, Player.Y)
+    val (dx, dy) = Directions.getDeltaByDirection(Player.Direction)
+    val (lx, ly) = CorrectPoint(Player.X - dx, Player.Y - dy)
+
+    Ghosts.foreach(g => {
+      if(cx == g.X && cy == g.Y) {
+        if(g.IsVulnerable) g.kill;
+        else Player.kill;
+      } else if (lx == g.X && ly == g.Y) {
+        val (dgx, dgy) = Directions.getDeltaByDirection(g.Direction)
+        val (lgx, lgy) = CorrectPoint(g.X - dgx, g.Y - dgy)
+        if(lgx == cx && lgy == cy) {
+          if(g.IsVulnerable) g.kill;
+          else Player.kill;
+        }
+      }
+    })
+
+  }
+
+  private def resetEntityPosition(entity: Entity, cse: Case): Unit = {
+    if(IsPointInTheMap(entity.X, entity.Y)) {
+      val lc = map(entity.Y)(entity.X)
+      if(lc.Entities.contains(entity)) {
+        lc.Entities.remove(lc.Entities.indexOf(entity))
+      }
+    }
+    cse.Entities += entity;
+    cse.definePositionOf(entity)
   }
 }
