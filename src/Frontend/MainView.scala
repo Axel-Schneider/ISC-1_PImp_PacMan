@@ -7,6 +7,7 @@ class MainView(private val Logical: Logical) {
   Logical.subscribeCycle(refreshUserInterface)
 
   def refreshUserInterface(logical: Logical): Unit = {
-    print(logical.Map.map(l => l.mkString).mkString("\n"))
+    println(logical.Map.map(l => l.mkString).mkString("\n"))
+    println(logical.Player.Score)
   }
 }
