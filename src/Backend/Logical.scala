@@ -177,7 +177,7 @@ class Logical {
       mainLoopThreadExecutor.schedule(resetPositionTask, 5, TimeUnit.SECONDS)
     }
     // LAB
-    ChangePlayerDirection(Directions(Random.nextInt(Directions.maxId)));
+    Player.LAB_AIPlayerChoose(this)
   }
 
   private def moveEntity(entity: Entity, isGhosts: Boolean = false): Unit = {
