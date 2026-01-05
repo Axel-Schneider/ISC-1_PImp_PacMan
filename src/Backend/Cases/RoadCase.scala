@@ -6,13 +6,17 @@ import Backend.Entities.{Entity, Player}
 
 import scala.collection.mutable.ArrayBuffer
 
-class RoadCase(posX: Int, posY: Int) extends Case(CaseType.Road, posX, posY) {
+class RoadCase(posX: Int, posY: Int, val IsIntersection: Boolean = false) extends Case(CaseType.Road, posX, posY) {
   var Item: Items = Items.None;
+  var isGhostsSpawn: Boolean = false;
 
   override def toString: String = {
     if(!Entities.isEmpty)
       if(Entities.exists(e => e.isInstanceOf[Player])) "o";
-      else if (Entities.exists(e => e.isInstanceOf[Ghosts])) "U"
+      else if (Entities.exists(e => e.isInstanceOf[Ghosts]))
+        if(Entities.exists(e => e.asInstanceOf[Ghosts].IsBlinking)) "Y"
+        else if(Entities.exists(e => e.asInstanceOf[Ghosts].IsVulnerable)) "X"
+        else "U"
       else "?"
     else Item match {
       case Items.PacDot => ".";

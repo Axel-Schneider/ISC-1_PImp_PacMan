@@ -1,8 +1,10 @@
 package Backend
 
 import Backend.Cases.{Case, CaseType, DoorCase, EmptyCase, Items, RoadCase, WallCase}
+import Backend.Entities.Directions.Directions
 import Backend.Entities.Ghosts.{Blinky, Clyde, Ghosts, Inky, Pinky}
 import Backend.Entities.{Directions, Entity, Player}
+import Backend.global.Levels
 
 import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
 import scala.collection.mutable.ArrayBuffer
@@ -25,13 +27,22 @@ class Logical {
   private var itemsSpawn: RoadCase = null;
 
   private val subscriptions: ArrayBuffer[Logical => Unit] = ArrayBuffer.empty;
-  private val ex: ScheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+  private val mainLoopThreadExecutor: ScheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
   private val task = new Runnable {
     override def run(): Unit = {
       notifyListener()
     }
   }
-  private val infiniteNotifier = ex.scheduleAtFixedRate(task, 1, 1, TimeUnit.SECONDS)
+  private val resetThreadExecutor: ScheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+  private val resetPositionTask = new Runnable {
+    override def run(): Unit = {
+      ResetPosition()
+      startGame()
+    }
+  }
+  mainLoopThreadExecutor.scheduleAtFixedRate(task, 1, 1, TimeUnit.SECONDS)
+
+  ghosts.foreach(g => subscribeCycle(g.takeDecision))
 
   def Map = map;
   def Player = player;
@@ -47,12 +58,24 @@ class Logical {
     for(s <- subscriptions) s(this)
   }
 
-  def startGame() = {
+  def startGame() = resumeGame()
+
+  def resumeGame(): Unit = {
     isGamePlaying = true;
   }
 
   def pauseGame() = {
     isGamePlaying = false;
+  }
+
+  def ResetPosition(): Unit = {
+    resetEntityPosition(Player, playerSpawn)
+    Player.revive
+
+    ghosts.foreach(g => {
+      resetEntityPosition(g, ghostsSpawn(Random.nextInt(ghostsSpawn.length)))
+      g.revive
+    })
   }
 
   def LoadLevel(map: Array[String]): Unit = {
@@ -63,30 +86,31 @@ class Logical {
         this.map(y)(x) = c match {
           case ' ' => new EmptyCase(x, y);
           case 'w' => new WallCase(x, y);
-          case 'r' => new RoadCase(x, y);
+          case 'r' => new RoadCase(x, y, isCaseIntersection(map, x, y));
           case 'd' => {
-            val d = new RoadCase(x, y);
+            val d = new RoadCase(x, y, isCaseIntersection(map, x, y));
             d.Item = Items.PacDot;
             d
           };
           case 'D' => {
-            val D = new RoadCase(x, y);
+            val D = new RoadCase(x, y, isCaseIntersection(map, x, y));
             D.Item = Items.PowerPellet;
             D
           };
           case 'i' => {
-            val i = new RoadCase(x, y)
+            val i = new RoadCase(x, y, isCaseIntersection(map, x, y))
             itemsSpawn = i;
             i
           };
           case 'v' => new DoorCase(x, y);
           case 'P' => {
-            val P = new RoadCase(x, y);
+            val P = new RoadCase(x, y, isCaseIntersection(map, x, y));
             playerSpawn = P;
             P
           };
           case 'G' => {
-            val G = new RoadCase(x, y)
+            val G = new RoadCase(x, y, isCaseIntersection(map, x, y))
+            G.isGhostsSpawn = true;
             ghostsSpawn :+= G;
             G
           };
@@ -106,27 +130,68 @@ class Logical {
     }
   }
 
+  def ChangePlayerDirection(direction: Directions): Unit = {
+    val (deltaX, deltaY) = Directions.getDeltaByDirection(direction);
+    val (nx, ny) = CorrectPoint(player.X + deltaX, player.Y + deltaY)
+    if(!IsPointInTheMap(nx, ny)) {
+      println("Cannot change direction for nowhere")
+      return;
+    }
+    val nextCase = map(ny)(nx)
+    if(nextCase.CaseType == CaseType.Road) player.ChangeDirection(direction)
+    else println("Cannot change direction for a wall")
+  }
+
+  def IsPointInTheMap(x: Int, y: Int): Boolean = {
+    Map.length > y && y >= 0 && Map(0).length > x && x >= 0
+  }
+
+  def CorrectPoint(x: Int, y: Int): (Int, Int) = {
+    (
+      if(x >= map(0).length) 0 else if (x < 0) map(0).length-1 else x,
+      if(y >= map.length) 0 else if (y < 0) map.length-1 else y
+    )
+  }
+
+  private def isCaseIntersection(map: Array[String], x: Int, y: Int): Boolean = {
+    var (counterX, counterY) = (0, 0);
+    for(d <- -1 to 1 by 2) {
+      val (nx, ny) = (x+d, y+d)
+      if(map.length > ny && ny >= 0)
+        counterY += (if(Levels.ROAD_CHAR.contains(map(ny)(x))) 1 else 0);
+      if(map(0).length > nx && nx >= 0)
+        counterX += (if(Levels.ROAD_CHAR.contains(map(y)(nx))) 1 else 0);
+    }
+    counterX > 0 && counterY > 0
+  }
+
   subscriptions += calculateFrame;
   private def calculateFrame(logical: Logical): Unit = {
     moveEntity(Player)
     ghosts.foreach(g => moveEntity(g, true))
     eatCaseByPlayer()
+    checkColision()
+
+    if(!player.IsAlive) {
+      pauseGame();
+      mainLoopThreadExecutor.schedule(resetPositionTask, 5, TimeUnit.SECONDS)
+    }
+    // LAB
+    ChangePlayerDirection(Directions(Random.nextInt(Directions.maxId)));
   }
 
   private def moveEntity(entity: Entity, isGhosts: Boolean = false): Unit = {
     if(!isGamePlaying) return;
-    val deltaX = entity.Direction match {
-      case Directions.Left => -1
-      case Directions.Right => 1
-      case _ => 0
-    }
-    val deltaY = entity.Direction match {
-      case Directions.Up => -1
-      case Directions.Down => 1
-      case _ => 0
+    val (deltaX, deltaY) = Directions.getDeltaByDirection(entity.Direction);
+
+    val (nx, ny) = CorrectPoint(entity.X + deltaX, entity.Y + deltaY)
+
+    if(!IsPointInTheMap(nx, ny)) {
+      println("Error, case doesn't exist on the map")
+      return;
     }
 
-    val nextCase = map(entity.Y + deltaY)(entity.X + deltaX)
+    val nextCase = map(ny)(nx)
     val currentCase = map(entity.Y)(entity.X);
 
     if(nextCase.CaseType == CaseType.Road || (isGhosts && nextCase.CaseType == CaseType.Door)) {
@@ -140,6 +205,7 @@ class Logical {
   }
 
   private def eatCaseByPlayer() {
+    if(!isGamePlaying) return;
     val currentCase = map(player.Y)(player.X);
     if(!currentCase.isInstanceOf[RoadCase]) return;
     val currentRoad = currentCase.asInstanceOf[RoadCase]
@@ -149,6 +215,38 @@ class Logical {
   }
 
   private def makeGhostsVulnarable(): Unit = {
-    // TO DO
+    ghosts.foreach(g => g.makeVulnerable())
+  }
+
+  private def checkColision(): Unit = {
+    val (cx, cy) = (Player.X, Player.Y)
+    val (dx, dy) = Directions.getDeltaByDirection(Player.Direction)
+    val (lx, ly) = CorrectPoint(Player.X - dx, Player.Y - dy)
+
+    Ghosts.foreach(g => {
+      if(cx == g.X && cy == g.Y) {
+        if(g.IsVulnerable) g.kill;
+        else Player.kill;
+      } else if (lx == g.X && ly == g.Y) {
+        val (dgx, dgy) = Directions.getDeltaByDirection(g.Direction)
+        val (lgx, lgy) = CorrectPoint(g.X - dgx, g.Y - dgy)
+        if(lgx == cx && lgy == cy) {
+          if(g.IsVulnerable) g.kill;
+          else Player.kill;
+        }
+      }
+    })
+
+  }
+
+  private def resetEntityPosition(entity: Entity, cse: Case): Unit = {
+    if(IsPointInTheMap(entity.X, entity.Y)) {
+      val lc = map(entity.Y)(entity.X)
+      if(lc.Entities.contains(entity)) {
+        lc.Entities.remove(lc.Entities.indexOf(entity))
+      }
+    }
+    cse.Entities += entity;
+    cse.definePositionOf(entity)
   }
 }
