@@ -24,6 +24,9 @@ class Logical {
 
   private var isGamePlaying = false;
 
+  private var isDirectionWaiting = false;
+  private var nextDirection = Directions.Up;
+
   private var playerSpawn: RoadCase = null;
   private var ghostsSpawn: Array[RoadCase] = Array.empty;
   private var itemsSpawn: RoadCase = null;
@@ -137,6 +140,8 @@ class Logical {
   }
 
   def ChangePlayerDirection(direction: Directions): Unit = {
+    nextDirection = direction
+    isDirectionWaiting = true;
     val (deltaX, deltaY) = Directions.getDeltaByDirection(direction);
     val (nx, ny) = CorrectPoint(player.X + deltaX, player.Y + deltaY)
     if(!IsPointInTheMap(nx, ny)) {
@@ -144,7 +149,10 @@ class Logical {
       return;
     }
     val nextCase = map(ny)(nx)
-    if(nextCase.CaseType == CaseType.Road) player.ChangeDirection(direction)
+    if(nextCase.CaseType == CaseType.Road) {
+      player.ChangeDirection(direction)
+      isDirectionWaiting = false;
+    }
     else println("Cannot change direction for a wall")
   }
 
@@ -173,6 +181,7 @@ class Logical {
 
   subscriptions += calculateFrame;
   private def calculateFrame(logical: Logical): Unit = {
+    if(isDirectionWaiting) ChangePlayerDirection(nextDirection);
     moveEntity(Player)
     ghosts.foreach(g => moveEntity(g, true))
     eatCaseByPlayer()
