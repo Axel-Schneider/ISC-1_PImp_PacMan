@@ -17,6 +17,7 @@ class GameRenderer(logical: Logical) {
   // On initialise FunGraphics plus tard ou on suppose que le niveau est chargé avant l'instanciation
   val mapHeight = logical.Map.length
   val mapWidth = logical.Map(0).length
+  val colorBlue = new Color(33, 33, 222)
 
   val display = new FunGraphics(mapWidth * CELL_SIZE, mapHeight * CELL_SIZE + 40, "Pac-Man Scala")
 
@@ -88,7 +89,7 @@ class GameRenderer(logical: Logical) {
 
     c.CaseType match {
       case CaseType.Wall =>
-        display.setColor(new Color(33, 33, 222)) // Bleu Arcade
+        display.setColor(colorBlue) // Bleu Arcade
         display.drawFillRect(px, py, CELL_SIZE, CELL_SIZE)
         display.setColor(Color.BLACK)
         display.drawRect(px + 4, py + 4, CELL_SIZE - 8, CELL_SIZE - 8) // Effet de bord
