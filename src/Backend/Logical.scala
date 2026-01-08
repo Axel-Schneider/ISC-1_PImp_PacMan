@@ -45,7 +45,7 @@ class Logical {
       startGame()
     }
   }
-  mainLoopThreadExecutor.scheduleAtFixedRate(task, GAME_SPEED_FRAME_MS, GAME_SPEED_FRAME_MS, TimeUnit.MILLISECONDS)
+  mainLoopThreadExecutor.scheduleAtFixedRate(task, 1000, GAME_SPEED_FRAME_MS, TimeUnit.MILLISECONDS)
 
   ghosts.foreach(g => subscribeCycle(g.takeDecision))
 

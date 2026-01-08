@@ -91,7 +91,8 @@ object SpriteManager {
     val values = Array.ofDim[Color](SPRITE_SIZE, SPRITE_SIZE)
     for (i <- 0 until SPRITE_SIZE) {
       for (j <- 0 until SPRITE_SIZE) {
-        values(i)(j) = new Color(imgBuffer.getRGB(i, j), true)  // true to handle transparency
+        val color = new Color(imgBuffer.getRGB(i, j), true)
+        values(i)(j) = if(color.getAlpha < 255) Color.BLACK else color
       }
     }
     return values
