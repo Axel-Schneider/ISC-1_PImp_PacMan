@@ -71,7 +71,6 @@ class Renderer(logical: Logical) {
   private def drawGhost(ghost: Ghosts) : Unit = {
     var name = ""
 
-    println(s"blinkingCOunt: $isBlikingCount")
     if (ghost.IsBlinking){
       isBlikingCount += 1
       if (isBlikingCount % BLINKING_RATE == 0){
@@ -119,21 +118,21 @@ class Renderer(logical: Logical) {
           case Items.PowerPellet =>
             name = "powerpellet"
           case Items.Cherry =>
-            name = "blinking"
+            name = "vim"
           case Items.Strawberry =>
-            name = "strawberry"
+            name = "linux"
           case Items.Orange =>
-            name = "orange"
+            name = "vscode"
           case Items.Apple =>
-            name = "apple"
+            name = "golang"
           case Items.Melon =>
-            name = "apple"
+            name = "git"
           case Items.Galaxian =>
-            name = "apple"
+            name = "rust"
           case Items.Bell =>
-            name = "apple"
+            name = "typescript"
           case Items.Key =>
-            name = "apple"
+            name = "vlc"
           case _ =>
         }
         if(name != "") drawSprite(SpriteManager.getSprite(name), x, y)
