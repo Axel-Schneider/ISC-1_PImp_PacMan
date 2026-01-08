@@ -11,7 +11,7 @@ class MainView(private val Logical: Logical) {
   SpriteManager.loadSprites()
 
   def refreshUserInterface(logical: Logical): Unit = {
-    print(logical.Map.map(l => l.mkString).mkString("\n"))
+//    print(logical.Map.map(l => l.mkString).mkString("\n"))
     renderer.displayMap()
   }
 }

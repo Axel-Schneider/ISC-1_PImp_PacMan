@@ -17,6 +17,8 @@ class Renderer(logical: Logical) {
   val HEIGHT = logical.Map(0).length
 
   var isBlikingCount = 0
+  var isBlinkedImage = false
+  val BLINKING_RATE = 11 // every x map reload
 
   val display = new FunGraphics(HEIGHT*SpriteManager.SPRITE_SIZE, WIDTH*SpriteManager.SPRITE_SIZE)
 
@@ -67,24 +69,39 @@ class Renderer(logical: Logical) {
   }
 
   private def drawGhost(ghost: Ghosts) : Unit = {
-    var blinky = "python"
-    var clyde = "windows"
-    var pinky = "office"
-    var inky = "windev"
-    if (ghost.IsBlinking){
+    var name = ""
 
+    println(s"blinkingCOunt: $isBlikingCount")
+    if (ghost.IsBlinking){
+      isBlikingCount += 1
+      if (isBlikingCount % BLINKING_RATE == 0){
+        isBlinkedImage = !isBlinkedImage
+      }
     }
+
     ghost match {
       case Blinky.INSTANCE =>
-        drawSprite(SpriteManager.getSprite(blinky), ghost.X, ghost.Y)
+        name = "python"
       case Clyde.INSTANCE =>
-        drawSprite(SpriteManager.getSprite(clyde), ghost.X, ghost.Y)
+        name = "windows"
       case Pinky.INSTANCE =>
-        drawSprite(SpriteManager.getSprite(pinky), ghost.X, ghost.Y)
+        name = "office"
       case Inky.INSTANCE =>
-        drawSprite(SpriteManager.getSprite(inky), ghost.X, ghost.Y)
+        name = "windev"
       case _ =>
     }
+
+    if (ghost.IsVulnerable){
+      if(isBlinkedImage){
+        name = "blinking"
+      } else {
+        name = "vulnerable"
+      }
+    }
+
+    if (!ghost.IsAlive) name = "dead"
+
+    drawSprite(SpriteManager.getSprite(name), ghost.X, ghost.Y)
   }
 
   private def drawCase(c: Case, x: Int, y: Int): Unit = {
