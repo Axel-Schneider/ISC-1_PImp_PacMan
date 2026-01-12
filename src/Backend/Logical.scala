@@ -24,6 +24,7 @@ class Logical {
 
   private var isGamePlaying = false;
   private var currentMap: Array[String] = Array.empty;
+  private var isGameOver = false
 
   private var isDirectionWaiting = false;
   private var nextDirection = Directions.Up;
@@ -57,6 +58,7 @@ class Logical {
   def GhostsSpawn: Array[RoadCase] = ghostsSpawn;
 
   def IsGamePlaying = isGamePlaying;
+  def IsGameOver = isGameOver
 
   def subscribeCycle(callback: Logical => Unit): Unit = {
     subscriptions += callback;
@@ -215,6 +217,7 @@ class Logical {
       if (player.Lives > 0) {
         resetThreadExecutor.schedule(resetPositionTask, 5, TimeUnit.SECONDS)
       } else {
+        isGameOver = true
         println("GAME OVER")
       }
     }
