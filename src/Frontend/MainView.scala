@@ -12,6 +12,8 @@ class MainView(private val Logical: Logical) {
 
   def refreshUserInterface(logical: Logical): Unit = {
 //    print(logical.Map.map(l => l.mkString).mkString("\n"))
-    renderer.displayMap()
+    if(!logical.IsGameOver) renderer.displayMap()
+    else renderer.displayGameOver()
+
   }
 }

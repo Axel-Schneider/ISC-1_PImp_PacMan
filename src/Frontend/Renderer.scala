@@ -9,7 +9,7 @@ import Backend.Cases.Items
 import Backend.Entities.Ghosts.{Blinky, Clyde, Ghosts, Inky, Pinky}
 import Backend.Logical
 
-import java.awt.Color
+import java.awt.{Color, Font}
 import java.awt.event.{KeyAdapter, KeyEvent}
 
 class Renderer(logical: Logical) {
@@ -61,7 +61,16 @@ class Renderer(logical: Logical) {
       if (logical.Player.IsAlive) {
         drawPlayer(logical.Player)
       }
+      displayLives()
+      displayScore()
     }
+  }
+
+  def displayGameOver(): Unit = {
+    display.clear()
+    display.setColor(Color.BLACK)
+    display.drawFillRect(0, 0, display.getFrameWidth, display.getFrameHeight)
+    display.drawString(display.getFrameWidth/3, display.getFrameHeight/2, s"GAME OVER", "Arial", Font.BOLD, 50, Color.RED)
   }
 
   private def drawPlayer(player: Player): Unit = {
@@ -140,7 +149,7 @@ class Renderer(logical: Logical) {
     }
   }
 
-  def drawSprite(sprite: Sprite, x: Int, y: Int): Unit = {
+  private def drawSprite(sprite: Sprite, x: Int, y: Int): Unit = {
     if (x < 0 || x >= display.width / sprite.size) return
     if (y < 0 || y >= display.height / sprite.size) return
 
@@ -149,5 +158,13 @@ class Renderer(logical: Logical) {
         display.setPixel(x*sprite.size + i, y*sprite.size + j, sprite.pixels(i)(j))
       }
     }
+  }
+
+  private def displayLives(): Unit = {
+    display.drawString(20, 20, s"PV: ${logical.Player.Lives}", "Arial", Font.BOLD, 20, Color.YELLOW)
+  }
+
+  private def displayScore(): Unit = {
+    display.drawString(500, 20, s"SCORE: ${logical.Player.Score}", "Arial", Font.BOLD, 20, Color.YELLOW)
   }
 }
