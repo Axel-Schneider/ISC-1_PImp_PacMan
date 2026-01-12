@@ -66,13 +66,6 @@ class Renderer(logical: Logical) {
     }
   }
 
-  def displayVictory(): Unit = {
-    display.clear()
-    display.setColor(Color.YELLOW)
-    display.drawFillRect(0, 0, display.getFrameWidth, display.getFrameHeight)
-    display.drawString(display.getFrameWidth/3, display.getFrameHeight/2, s"VICTORY!", "Arial", Font.BOLD, 50, Color.BLUE)
-  }
-
   def displayGameOver(): Unit = {
     display.clear()
     display.setColor(Color.BLACK)

@@ -13,7 +13,6 @@ class MainView(private val Logical: Logical) {
   def refreshUserInterface(logical: Logical): Unit = {
 //    print(logical.Map.map(l => l.mkString).mkString("\n"))
     if(!logical.IsGameOver) renderer.displayMap()
-    else if (logical.Player.Lives > 0) renderer.displayVictory()
     else renderer.displayGameOver()
 
   }
