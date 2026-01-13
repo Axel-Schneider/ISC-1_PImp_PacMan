@@ -44,9 +44,7 @@ abstract class Ghosts(val MainColor: Color) extends Entity {
   }
 
   // Will get the target case based on the ghost behavior
-  def getTarget(logical: Logical): (Int, Int) ={
-    (logical.Player.X, logical.Player.Y)
-  }
+  def getTarget(logical: Logical): (Int, Int)
 
   protected var isLastCaseDoor = false;
   final def takeDecision(logical: Logical): Unit = {
