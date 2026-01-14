@@ -8,6 +8,7 @@ target/
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.idea/misc.xml
 *.iws
 *.iml
 *.ipr
@@ -46,3 +47,8 @@ build/
 ### Scala ###
 .bsp/
 *.jar
+
+.idea/
+misc.xml
+.idea/misc.xml
+.idea/misc.xml
