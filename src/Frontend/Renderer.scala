@@ -2,7 +2,8 @@ package Frontend
 
 import Backend.Entities.{Directions, Player}
 import Frontend.Sprite.{Sprite, SpriteManager}
-import hevs.graphics.FunGraphics
+import hevs.graphics.{FunGraphics, ImageGraphics}
+import hevs.graphics.utils.GraphicsBitmap
 import Backend.Cases._
 import Backend.Entities.Directions
 import Backend.Cases.Items
@@ -67,10 +68,12 @@ class Renderer(logical: Logical) {
   }
 
   def displayGameOver(): Unit = {
-    display.clear()
-    display.setColor(Color.BLACK)
-    display.drawFillRect(0, 0, display.getFrameWidth, display.getFrameHeight)
-    display.drawString(display.getFrameWidth/3, display.getFrameHeight/2, s"GAME OVER", "Arial", Font.BOLD, 50, Color.RED)
+    //display.clear()
+    //display.setColor(Color.BLACK)
+    //display.drawFillRect(0, 0, display.getFrameWidth, display.getFrameHeight)
+  //  display.drawString(display.getFrameWidth/3, display.getFrameHeight/2, s"GAME OVER", "Arial", Font.BOLD, 50, Color.RED)
+    //val gameOverImage = new GraphicsBitmap("gameover.png")
+    display.drawPicture(0, 0, new GraphicsBitmap("src/gameover.jpg"))
   }
 
   private def drawPlayer(player: Player): Unit = {
