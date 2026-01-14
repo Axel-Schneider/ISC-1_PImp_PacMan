@@ -9,5 +9,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="scala-sdk-2.13.16" level="application" />
     <orderEntry type="library" name="fungraphics-1.5.15" level="project" />
+    <orderEntry type="library" name="funGraphics-1.5.20 (5)" level="project" />
   </component>
 </module>
