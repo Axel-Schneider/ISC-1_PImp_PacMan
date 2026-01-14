@@ -23,8 +23,8 @@ class Logical {
   );
 
   private var isGamePlaying = false;
+  private var currentMap: Array[String] = Array.empty;
   private var isGameOver = false
-  private var totalPacDots: Int = 0;
 
   private var isDirectionWaiting = false;
   private var nextDirection = Directions.Up;
@@ -65,7 +65,7 @@ class Logical {
   }
 
   def notifyListener(): Unit = {
-    for(s <- subscriptions) s(this)
+    if(!this.map.isEmpty) for(s <- subscriptions) s(this)
   }
 
   def startGame() = resumeGame()
@@ -91,14 +91,15 @@ class Logical {
   }
 
   def LoadLevel(map: Array[String]): Unit = {
-    this.map = Array.ofDim(map.length, map(0).length);
+    currentMap = map;
+    val l_map = Array.ofDim[Case](map.length, map(0).length);
 
     pacDotEatenCounter = 0
     totalPacDots = 0
 
     for((l, y) <- map.zipWithIndex) {
       for((c, x) <- l.zipWithIndex) {
-        this.map(y)(x) = c match {
+        l_map(y)(x) = c match {
           case ' ' => new EmptyCase(x, y);
           case 'w' => new WallCase(x, y);
           case 'r' => new RoadCase(x, y, isCaseIntersection(map, x, y));
@@ -135,15 +136,34 @@ class Logical {
     }
 
     if(player == null) throw new Exception("No spawn for the player in the level!")
+    if(player.X != -1 || player.Y != -1) {
+      try {
+        val cs = l_map(player.Y)(player.X).asInstanceOf[RoadCase]
+        cs.Entities.remove(cs.Entities.indexOf(player))
+      }catch {
+        case e: Exception => println(e.getMessage)
+      }
+    }
     playerSpawn.Entities += player;
     player.definePosition(playerSpawn.X, playerSpawn.Y)
 
     if(ghostsSpawn.length <= 0) throw new Exception("No spawn for the ghosts in the level !")
     for(g <- ghosts) {
+      g.revive
+      if(g.X != -1 || g.Y != -1) {
+        try {
+          val cs = l_map(g.Y)(g.X).asInstanceOf[RoadCase]
+          cs.Entities.remove(cs.Entities.indexOf(player))
+        }catch {
+          case e: Exception => println(e.getMessage)
+        }
+      }
       val spw = ghostsSpawn(Random.nextInt(ghostsSpawn.length));
       spw.Entities += g;
       g.definePosition(spw.X, spw.Y)
     }
+    this.map = l_map;
+    pacDotEatenCounter = 0
   }
 
   def ChangePlayerDirection(direction: Directions): Unit = {
@@ -188,6 +208,8 @@ class Logical {
 
   subscriptions += calculateFrame;
   private def calculateFrame(logical: Logical): Unit = {
+    if(!isGamePlaying) return;
+    if(map.isEmpty) return;
     if (isDirectionWaiting) ChangePlayerDirection(nextDirection);
     moveEntity(Player)
     ghosts.foreach(g => moveEntity(g, true))
@@ -198,7 +220,7 @@ class Logical {
       pauseGame();
       player.loseLife()
       if (player.Lives > 0) {
-        mainLoopThreadExecutor.schedule(resetPositionTask, 5, TimeUnit.SECONDS)
+        resetThreadExecutor.schedule(resetPositionTask, 5, TimeUnit.SECONDS)
       } else {
         isGameOver = true
         println("GAME OVER")
@@ -206,6 +228,7 @@ class Logical {
     }
     // Game flow
     calculateItemSpawn()
+    CheckEndGame()
   }
 
   private def moveEntity(entity: Entity, isGhosts: Boolean = false): Unit = {
@@ -224,7 +247,7 @@ class Logical {
 
     if(nextCase.CaseType == CaseType.Road || (isGhosts && nextCase.CaseType == CaseType.Door)) {
       val nextRoad = nextCase;
-      currentCase.Entities.remove(currentCase.Entities.indexOf(entity));
+      if(currentCase.Entities.contains(entity)) currentCase.Entities.remove(currentCase.Entities.indexOf(entity));
       nextRoad.Entities += entity;
       nextRoad.definePositionOf(entity)
     } else {
@@ -328,5 +351,34 @@ class Logical {
     val nxtItm = nextItem.id + 1
     if(nxtItm >= Items.maxId) return;
     nextItem = Items(nxtItm)
+  }
+  
+  // Game flow ending
+  private val reloadMapThreadExecutor: ScheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+  private var reloadMapScheduler: Option[ScheduledFuture[_]] = None;
+  private val reloadMapTask = new Runnable {
+    override def run(): Unit = {
+      LoadLevel(currentMap);
+      relaunchGameScheduler = Some(relaunchGameThreadExecutor.schedule(relaunchGameTask, 2, TimeUnit.SECONDS))
+    }
+  }
+
+  private val relaunchGameThreadExecutor: ScheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+  private var relaunchGameScheduler: Option[ScheduledFuture[_]] = None;
+  private val relaunchGameTask = new Runnable {
+    override def run(): Unit = {
+      isGamePlaying = true;
+    }
+  }
+
+  private def CheckEndGame(): Unit = {
+    if(!map.exists(l => l.exists {
+      case roadCase: RoadCase => roadCase.Item == Items.PacDot
+      case _ => false
+    })) {
+      // End game
+      isGamePlaying = false;
+      reloadMapScheduler = Some(reloadMapThreadExecutor.schedule(reloadMapTask, 3, TimeUnit.SECONDS))
+    }
   }
 }
